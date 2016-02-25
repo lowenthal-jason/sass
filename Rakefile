@@ -25,6 +25,12 @@ end
 
 version = RUBY_VERSION.split(".").map {|n| n.to_i}
 
+def ruby_gt_1_9_2?
+  ruby_version = Gem::Version.new(RUBY_VERSION)
+  version_1_9_2 = Gem::Version.new("1.9.2")
+  ruby_version >= version_1_9_2
+end
+
 # TODO: Run Rubocop on Ruby 2.2+ when it's supported. See
 # https://github.com/sass/sass/pull/1805.
 if (version[0] > 1 || (version[0] == 1 && version[1] > 8)) &&
@@ -50,15 +56,41 @@ end
 task :test => :rubocop
 
 task :"sass-spec" => "sass-spec:update" do
-  require File.join(File.dirname(__FILE__), 'test', 'sass-spec', 'lib', 'sass_spec.rb')
-  Dir.chdir(File.join("test", "sass-spec")) do
+  if ruby_gt_1_9_2?
+    old_load_path = $:.dup
     begin
-      old_argv = ARGV.dup
-      ARGV.replace([])
-      SassSpec::Runner.new(SassSpec::CLI.parse()).run
+      $:.unshift(File.join(File.dirname(__FILE__), "lib"))
+      sass_spec_dir = File.join(File.dirname(__FILE__), 'test', 'sass-spec')
+      require File.join(sass_spec_dir, 'lib', 'sass_spec.rb')
+      result = SassSpec::Runner.new(
+        :spec_directory => File.join(sass_spec_dir, "spec"),
+        :engine_adapter => SassEngineAdapter.new("sass"),
+        :no_exit => true,
+        :generate => [],
+        :tap => false,
+        :skip => false,
+        :verbose => false,
+        :filter => "",
+        :limit => -1,
+        :unexpected_pass => false,
+        :nuke => false,
+
+        # Constants
+        :output_styles => ["nested", "compressed", "expanded", "compact"],
+        :input_files => ["input.scss", "input.sass"],
+        :nested_output_file => 'expected_output',
+        :compressed_output_file => 'expected.compressed',
+        :expanded_output_file => 'expected.expanded',
+        :compact_output_file => 'expected.compact'
+      ).run
+      if result != 0
+        raise "Sass-spec failed with exit code: #{result}"
+      end
     ensure
-      ARGV.replace(old_argv)
+      $:.replace(old_load_path)
     end
+  else
+    "Skipping sass-spec on ruby versions less than 1.9.2"
   end
 end
 
