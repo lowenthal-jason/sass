@@ -49,6 +49,29 @@ end
 
 task :test => :rubocop
 
+task :"sass-spec" => "sass-spec:update" do
+  require File.join(File.dirname(__FILE__), 'test', 'sass-spec', 'lib', 'sass_spec.rb')
+  Dir.chdir(File.join("test", "sass-spec")) do
+    begin
+      old_argv = ARGV.dup
+      ARGV.replace([])
+      SassSpec::Runner.new(SassSpec::CLI.parse()).run
+    ensure
+      ARGV.replace(old_argv)
+    end
+  end
+end
+
+namespace :"sass-spec" do
+  task :update do
+    puts "Updating test/sass-spec."
+    system("git submodule update --remote test/sass-spec")
+  end
+end
+
+task :test => :"sass-spec"
+
+
 # ----- Packaging -----
 
 # Don't use Rake::GemPackageTast because we want prerequisites to run

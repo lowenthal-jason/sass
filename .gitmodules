@@ -1,3 +1,6 @@
 [submodule "vendor/listen"]
 	path = vendor/listen
 	url = git://github.com/guard/listen.git
+[submodule "test/sass-spec"]
+	path = test/sass-spec
+	url = https://github.com/sass/sass-spec.git
